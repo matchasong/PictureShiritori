@@ -1,0 +1,202 @@
+service: picShiritori
+
+provider:
+  name: aws
+  runtime: python3.7
+  stage: dev
+  region: ap-northeast-1
+  deploymentBucket: ${file(./myCustomFile.yml):deployment_bucket}
+  logRetentionInDays: 30
+  timeout: 30
+  memorySize: 128
+  environment:
+    TZ: Asia/Tokyo
+    SLACK_API_TOKEN: ${file(./myCustomFile.yml):slack_token}
+    SLACK_BOT_API_TOKEN: ${file(./myCustomFile.yml):slack_bot_token}
+    POST_CHANNEL: ${file(./myCustomFile.yml):post_channel}
+    POST_CHANNEL_ID: ${file(./myCustomFile.yml):post_channel_id}
+    PUT_BACKET: ${file(./myCustomFile.yml):put_bucket}
+    SLACK_SIGNING_SECRET: ${file(./myCustomFile.yml):slack_signing_secret}
+  logs:
+    restApi: true
+  iamRoleStatements:
+    - Effect: 'Allow'
+      Action:
+        - 's3:PutObject'
+      Resource:
+        Fn::Join:
+          - ''
+          - - 'arn:aws:s3:::'
+            - ${file(./myCustomFile.yml):put_bucket}
+            - '/*'
+
+    - Effect: 'Allow'
+      Action:
+        - 's3:GetObject'
+      Resource:
+        Fn::Join:
+          - ''
+          - - 'arn:aws:s3:::'
+            - ${file(./myCustomFile.yml):put_bucket}
+            - '/*'
+
+    - Effect: 'Allow'
+      Action:
+        - 'dynamodb:*'
+      Resource:
+        Fn::Join:
+          - ''
+          - - 'arn:aws:dynamodb:ap-northeast-1:${file(./myCustomFile.yml):aws_account_id}:table/game'
+
+    - Effect: 'Allow'
+      Action:
+        - 'dynamodb:*'
+      Resource:
+        Fn::Join:
+          - ''
+          - - 'arn:aws:dynamodb:ap-northeast-1:${file(./myCustomFile.yml):aws_account_id}:table/image'
+
+    - Effect: 'Allow'
+      Action:
+        - 'dynamodb:*'
+      Resource:
+        Fn::Join:
+          - ''
+          - - 'arn:aws:dynamodb:ap-northeast-1:${file(./myCustomFile.yml):aws_account_id}:table/word'
+
+    - Effect: 'Allow'
+      Action:
+        - 'rekognition:DetectLabels'
+      Resource: "*"
+
+package:
+  exclude:
+    - dist/**
+    - myCustomFile.yml
+    - node_modules/**
+
+plugins:
+  - serverless-prune-plugin
+  - serverless-plugin-aws-alerts
+  - serverless-python-requirements
+
+functions:
+  main:
+    handler: src/main.handler
+    timeout: 90
+    events:
+      - http:
+          path: putImageToS3
+          method: post
+          async: true
+#          async: false #for Slack API challenge
+          maximumEventAge: 90
+          maximumRetryAttempts: 0
+
+  start:
+    handler: src/start.handler
+    timeout: 30
+    events:
+      - http:
+          path: gameStart
+          method: post
+          async: true
+          response:
+            headers:
+              Content-Type: "'application/json'"
+          maximumEventAge: 30
+          maximumRetryAttempts: 0
+
+  judge:
+    handler: src/judge.handler
+    timeout: 30
+    events:
+      - s3:
+          bucket: ${file(./myCustomFile.yml):put_bucket}
+          event: s3:ObjectCreated:*
+          maximumRetryAttempts: 0
+
+  finish:
+    handler: src/finish.handler
+    timeout: 30
+    events:
+      - schedule:
+          rate: rate(5 minutes) #5分置きに終了確認をする
+          enabled: true
+
+resources:
+  Resources:
+    # DynamoDBの構築
+    GameTable:
+      Type: 'AWS::DynamoDB::Table'
+      Properties:
+        # テーブル名の指定
+        TableName: game
+        # キーの型を指定
+        AttributeDefinitions:
+          -
+            AttributeName: id
+            AttributeType: N
+        # キーの種類を指定（ハッシュorレンジキー）
+        KeySchema:
+          -
+            AttributeName: id
+            KeyType: HASH
+        # プロビジョニングするキャパシティーユニットの設定
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        # TTLの指定
+        TimeToLiveSpecification:
+          AttributeName: unixTime
+          Enabled: true
+
+    WordTable:
+      Type: 'AWS::DynamoDB::Table'
+      Properties:
+        # テーブル名の指定
+        TableName: word
+        # キーの型を指定
+        AttributeDefinitions:
+          -
+            AttributeName: id
+            AttributeType: N
+        # キーの種類を指定（ハッシュorレンジキー）
+        KeySchema:
+          -
+            AttributeName: id
+            KeyType: HASH
+        # プロビジョニングするキャパシティーユニットの設定
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        # TTLの指定
+        TimeToLiveSpecification:
+          AttributeName: unixTime
+          Enabled: true
+
+    ImageTable:
+      Type: 'AWS::DynamoDB::Table'
+      Properties:
+        # テーブル名の指定
+        TableName: image
+        # キーの型を指定
+        AttributeDefinitions:
+          -
+            AttributeName: imageId
+            AttributeType: N
+        # キーの種類を指定（ハッシュorレンジキー）
+        KeySchema:
+          -
+            AttributeName: imageId
+            KeyType: HASH
+        # プロビジョニングするキャパシティーユニットの設定
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        # TTLの指定
+        TimeToLiveSpecification:
+          AttributeName: unixTime
+          Enabled: true
+
+custom: ${file(./myCustomFile.yml)}

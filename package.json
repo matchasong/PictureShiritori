@@ -1,0 +1,19 @@
+{
+  "name": "picshiritori",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "serverless": "^1.83.0"
+  },
+  "devDependencies": {
+    "serverless-plugin-aws-alerts": "^1.6.1",
+    "serverless-prune-plugin": "^1.4.3",
+    "serverless-python-requirements": "^5.1.0"
+  }
+}

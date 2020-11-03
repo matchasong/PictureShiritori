@@ -1,0 +1,6 @@
+myCustomFile.yml
+node_modules
+.serverless
+.DS_Store
+bk/
+__pycache__/
