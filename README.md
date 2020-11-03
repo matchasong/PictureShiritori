@@ -53,7 +53,7 @@ slack_signing_secret:<Slackのsigning_secret>
 
 3.デプロイ用バケットの作成
 
-<deployment_bucket>の名前でバケットを作成する
+<deployment_bucket>の名前でS3バケットを作成する
 
 4.モジュールを、Slack APIチャレンジ対応用に編集
 
