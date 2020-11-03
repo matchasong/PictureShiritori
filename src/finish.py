@@ -6,6 +6,7 @@ from logging import getLogger,StreamHandler,Formatter,DEBUG,INFO,WARNING,ERROR,C
 import itertools
 import traceback
 from datetime import datetime
+from collections import defaultdict
 
 logger = getLogger(__name__)
 logger.setLevel(DEBUG)
@@ -160,7 +161,7 @@ def get_winner(game_id):
 
     logger.debug('words:'+str(words))
 
-    for a in words:
+    for a in reversed(words):
         if a.get('isValid',None) and a.get('poster',None):
             valid_words.append(a)
 
@@ -171,17 +172,20 @@ def get_winner(game_id):
         logger.info('winner:None')
         return None
 
-    sorted_words_by_poster = sorted(valid_words, key=lambda x:x['poster'])
+    words_by_poster_dict = defaultdict(int)
 
-    posters = itertools.groupby(sorted_words_by_poster,key=lambda y: y['poster'])
+    for v in valid_words:
+        poster = v['poster']
+        words_by_poster_dict[poster] += 1
 
-    logger.info(str(posters))
+    logger.info(str(words_by_poster_dict))
     winner = None
     max_cnt = 0
-    for k,v in posters:
-        logger.info(str(list(v)))
-        if len(list(v)) >= max_cnt:
-            max_cnt = len(list(v))
+
+    for k,v in words_by_poster_dict.items():
+        logger.info(f'ユーザーごとのリスト:{k}:{v}')
+        if v > max_cnt:
+            max_cnt = v
             winner = k
 
     logger.info('winner:'+str(winner))
