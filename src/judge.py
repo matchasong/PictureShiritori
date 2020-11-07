@@ -407,7 +407,7 @@ def send_message_to_slack(result_json,prev_next_char):
     if result_json.get('isValid'):
         msg = ok_msg
     else:
-        if result_json.get['word'][0] == prev_next_char:
+        if result_json['word'][0] == prev_next_char:
             msg = ng_msg_dup
         else:
             msg = ng_msg
