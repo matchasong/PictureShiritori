@@ -402,15 +402,19 @@ def send_message_to_slack(result_json,prev_next_char):
     
     ok_msg = f"Good！ それは{result_json.get('word')}だね。次の文字は{result_json.get('nextChar','')}だよ！"
     ng_msg = f"残念！ それは{result_json.get('word')}だね。{prev_next_char}で始まるものを描いてね！"
+    ng_msg_unknown = f"ごめんね！ 何の絵か分からなかったよ。{prev_next_char}で始まるものを描いてね！"
     ng_msg_dup = f"残念！ それは{result_json.get('word')}だね。もう出ているよ！"
     
     if result_json.get('isValid'):
         msg = ok_msg
-    else:
+    elif result_json.get('word',None):
         if result_json['word'][0] == prev_next_char:
             msg = ng_msg_dup
         else:
             msg = ng_msg
+    else:
+        msg = ng_msg_unknown
+
         
     logger.debug(msg)
     
@@ -427,14 +431,14 @@ def send_message_to_slack(result_json,prev_next_char):
 def most_confident_word(retrekog):
     """
     rekognitionの戻り値を引数に取って、最もconfidentの値が高い単語を返す
-    ただし、rekognitionの判定結果(Labels)が空だった場合は'???'を返す
+    ただし、rekognitionの判定結果(Labels)が空だった場合はNoneを返す
 
     引数:   retrekog            dict     rekognitionの戻り値
     戻り値: most_confident_word   str      最もconfidentの値が高い単語
     """
     
     max_confidence = 0.0
-    most_confident_word = '???'
+    most_confident_word = None
     
     for word in retrekog.get('Labels'):
         if max_confidence < word.get('Confidence'):
