@@ -9,7 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "serverless": "^1.83.0"
+    "serverless": "^1.83.3"
   },
   "devDependencies": {
     "serverless-plugin-aws-alerts": "^1.6.1",
